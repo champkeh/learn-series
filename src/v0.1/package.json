@@ -1,0 +1,31 @@
+{
+  "name": "rollup",
+  "version": "0.1.0",
+  "description": "Next-generation ES6 module bundler",
+  "main": "dist/index.js",
+  "jsnext:main": "src/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rich-harris/rollup"
+  },
+  "keywords": [
+    "modules",
+    "bundler",
+    "bundling",
+    "es6",
+    "optimizer"
+  ],
+  "author": "Rich Harris",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/rich-harris/rollup/issues"
+  },
+  "homepage": "https://github.com/rich-harris/rollup",
+  "devDependencies": {
+    "source-map-support": "^0.2.10"
+  },
+  "dependencies": {
+    "acorn": "^1.1.0",
+    "escodegen": "^1.6.1"
+  }
+}
