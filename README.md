@@ -1,5 +1,8 @@
 # git 命令学习
 
+## 相关工具
+- [LearnGitBranch 在线沙盒工具](https://learngitbranching.js.org/?NODEMO)
+
 ## 基础知识
 文件的几个重要状态：
 1. 未跟踪(??)
@@ -267,3 +270,7 @@ git rebase -i HEAD~3
 ```text
 git branch <newBranchName> <sha1>
 ```
+
+## 参考资料
+- [git concepts simplified](https://gitolite.com/gcs.html) (打开页面后记得按 `A` 键切换成单页模式阅读)
+- [Pro Git](https://www.progit.cn/)
