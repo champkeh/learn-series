@@ -121,7 +121,8 @@ function analyse ( ast, magicString, module ) {
 						break;
 
 					case 'VariableDeclaration':
-						node.declarations.forEach( node.kind === 'let' ? addToBlockScope : addToScope ); // TODO const?
+						// node.declarations.forEach( node.kind === 'let' ? addToBlockScope : addToScope ); // TODO const?
+						['let', 'const'].includes(node.kind) ? node.declarations.forEach(addToBlockScope) : node.declarations.forEach(addToScope)
 						break;
 
 					case 'ClassDeclaration':
