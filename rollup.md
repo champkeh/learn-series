@@ -3,18 +3,8 @@
 
 ## Rollup基本数据结构
 
-### Bundle
-是rollup进行构建的一个基本单位，调用`build`方法时，开始对入口模块进行解析，并分析入口模块中import的所有的name，然后从这些import的依赖中查找对应name的定义，并把定义这些name的ast节点保存到一个数组中。这样当所有这些被import的name对应的ast节点都搜集完毕之后，只需要将这些ast节点和入口模块中的节点组装成单个ast树，再根据这棵树就可以生成最后的bundle了，这样就把入口模块所有的依赖打包成单个文件了。
-
-
-### Module
-对应单个模块的数据结构，在构造Module的实例时，会对该模块进行解析并分析该模块的imports/exports信息。同时提供了一个`define`方法，用来在该模块中查找对应name的定义节点；如果该name不是在该模块中定义的，则会继续向对应依赖中查找。
-
-### ExternalModule
-todo
-
 ### Scope
-js的作用域结构，通过`parent`字段进行级联，组成一个作用域链。结构如下：
+js的作用域表示，内部包含一个 names 列表，并通过`parent`字段进行级联，组成一个作用域链。结构如下：
 ```text
 {
     parent: Scope | null,
@@ -29,8 +19,17 @@ js的作用域结构，通过`parent`字段进行级联，组成一个作用域�
 
 同时，Scope 结构也会提供一个搜索函数`findDefiningScope`，用来查找某个 name 是在哪个作用域中定义的。(会从当前作用域开始，依次向父级作用域进行搜索)
 
+### Module
+表示**内部模块**(相对于后面的`ExternalModule`来说)的数据结构，在构造Module的实例时，会对该模块进行解析并分析该模块的imports/exports信息。同时提供了一个`define`方法，用来在该模块中查找对应name的定义节点；如果该name不是在该模块中定义的，则会继续向对应依赖中查找。
 
-## 重要逻辑分析
+### ExternalModule
+todo
+
+### Bundle
+是rollup进行构建的一个基本单位，调用`build`方法时，开始对入口模块进行解析，并分析入口模块中import的所有的name，然后从这些import的依赖中查找对应name的定义，并把定义这些name的ast节点保存到一个数组中。这样当所有这些被import的name对应的ast节点都搜集完毕之后，只需要将这些ast节点和入口模块中的节点组装成单个ast树，再根据这棵树就可以生成最后的bundle了，这样就把入口模块所有的依赖打包成单个文件了。
+
+
+## 主要逻辑分析
 
 ### walk.js
 `walk`函数用于遍历 ast 节点树，内部通过`visit`进行递归调用(深度优先)，通过两个全局标志变量`shouldSkip`和`shouldAbort`进行辅助，来决定是否跳过某些节点或退出整个遍历。
@@ -227,6 +226,121 @@ function checkForWrites ( node ) {
 > ```
 > 第二条语句依赖标识符`a`，但同时也会修改该标识符。因此，标识符`a`会同时出现在该语句的`_dependsOn`属性和`_modifies`属性中。
 
+### Module 的构造
+`Module`构造函数有3个参数，分别是`path`、`code`和`bundle`，分别表示该模块的路径、代码以及所在的bundle。
+这个`code`会被封装到一个`MagicString`实例中，方便后续对代码进行修改以及 sourcemap 的生成。
+
+`Module`实例上的`suggestedNames`容器的作用是什么呢？
+
+在构造`Module`实例时，会使用`acorn`去解析该模块的代码，生成 ast 并保存在该`Module`实例上面。由于注释信息并不会包含在 ast 节点上，所以通过`onComment`钩子将这些注释信息存储在实例的`comments`容器中。
+
+然后调用模块内部的`this.analysis()`方法对代码进行分析，在这个方法内部，首先对 ast 的顶层语句进行遍历，提取出该模块的`import/export`信息，分别保存在`Module`实例的`imports`和`exports`容器里面。
+
+其中，`imports`保存该模块**导入**的所有标识符，以`localName`为 key，下面的结构为 value：
+```json5
+{
+  source: '',
+  name: '',     // name 对应
+  localName: '' // localName 对应该模块内的名字
+}
+```
+
+这里，需要对3种不同的`import`语句进行说明一下，它们的`localName`和`name`稍有不同：
+
+1. `import foo from './foo';`
+   
+   对应**ImportDefaultSpecifier**，这里，`localName`为`foo`，`name`为`default`。
+   
+2. `import * as baz from './baz';`
+   
+   对应**ImportNamespaceSpecifier**，这里，`localName`为`baz`，`name`为`*`。
+
+3. `import { bar as f } from './bar';`
+   
+   对应**ImportSpecifier**，这里，`localName`为`f`，`name`为`bar`。
+
+`exports`保存该模块**导出**的所有标识符，`export`相对简单，只有2种：
+
+1. `export default function foo () {}`
+
+   对应**ExportDefaultDeclaration**
+
+2. `export { foo, bar, baz }`
+
+   对应**ExportNamedDeclaration**
+
+这两种不同的导出，在`exports`中的结构也是不一样的。
+
+**ExportDefaultDeclaration**，以`default`为 key，下面的结构为 value：
+```json5
+{
+  node: Node,
+  name: 'default',
+  localName: id | 'default',
+  isDeclaration: boolean
+}
+```
+`default`后面的内容是否是一个`Declaration`，会对结构有影响。
+
+**ExportNamedDeclaration**，又分2小类，一种是带`specifier`的，一种是不带的。
+比如，
+```js
+export var foo = 23;
+```
+这种是不带`specifier`的，`export`后面是一个普通的`Declaration`。这种类型的`export`在`exports`中的结构如下：
+以`name`为 key，以下面的结构为 value：
+如果后面的声明是一个变量声明，这个`name`就取第一个标识符的名字；否则就取对应声明的标识符。
+```json5
+{
+  node: Node,
+  localName: name,
+  expression: declaration
+}
+```
+
+还有一种带`specifier`的，比如下面这样：
+```js
+const foo = 1, bar = 2;
+function baz() {}
+export { foo, bar, baz }
+```
+`export`后面不再是一个声明，而是一个`specifier`数组。这种类型的`export`在`exports`中的结构如下：
+以`exportedName`为 key，以下面的结构为 value：
+```json5
+{
+  localName: '',
+  exportedName: '',
+}
+```
+
+`export`还有一个特别的方式，就是下面这样：
+```js
+export { foo } from './foo';
+```
+这种语句既有`export`，也有`import`。
+
+分析到这，我们需要总结一下了。
+
+在对模块代码的 ast 分析的第一步，就是提取出该模块所有的`import/export`信息，分别保存在实例的`imports`和`exports`容器中。其中，`imports`中以`localName`为 key，而`exports`中则以`exportedName`为 key。
+
+到这来，我们已经把模块的`import/export`信息解析完毕了，接着就是调用工具函数`analysis`来处理该模块的作用域，以及解析顶层语句的依赖标识符和可能修改的标识符信息，如上面的`analysis.js`所分析的那样。
+
+再然后，将顶层作用域中定义的`name`拷贝一份，存放在模块实例的`definedNames`属性中。
+
+然后，再次对 ast 的顶层语句进行遍历，这次遍历的目的是为了整合我们前面通过`analysis`分析出的`_defines`和`_modifies`，将这些信息统一到实例的`definitions`和`modifications`容器中，用来表示整个模块的信息。也即整个模块定义的所有的标识符都保存在`definitions`中，整个模块对`modifications`中的标识符可能会有修改操作。
+
+至此，我们的`Module`实例就构建完成啦。
+
+### Module 中各个方法的分析
+
+#### suggestName
+该方法是填充模块的`suggestedNames`容器，容器里面每一个`name`都会有一个合法的标识符
+
+#### expandAllStatements
+
+
+### sequence 工具
+todo
 
 ### finalisers
 todo
