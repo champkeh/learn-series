@@ -230,7 +230,6 @@ function checkForWrites ( node ) {
 `Module`构造函数有3个参数，分别是`path`、`code`和`bundle`，分别表示该模块的路径、代码以及所在的bundle。
 这个`code`会被封装到一个`MagicString`实例中，方便后续对代码进行修改以及 sourcemap 的生成。
 
-`Module`实例上的`suggestedNames`容器的作用是什么呢？
 
 在构造`Module`实例时，会使用`acorn`去解析该模块的代码，生成 ast 并保存在该`Module`实例上面。由于注释信息并不会包含在 ast 节点上，所以通过`onComment`钩子将这些注释信息存储在实例的`comments`容器中。
 
@@ -240,8 +239,8 @@ function checkForWrites ( node ) {
 ```json5
 {
   source: '',
-  name: '',     // name 对应
-  localName: '' // localName 对应该模块内的名字
+  name: '',     // name 对应该标识符在它本身模块内的名字
+  localName: '' // localName 对应该标识符在本模块内的名字
 }
 ```
 
@@ -259,7 +258,7 @@ function checkForWrites ( node ) {
    
    对应**ImportSpecifier**，这里，`localName`为`f`，`name`为`bar`。
 
-`exports`保存该模块**导出**的所有标识符，`export`相对简单，只有2种：
+`exports`保存该模块**导出**的所有标识符，`export`有2种：
 
 1. `export default function foo () {}`
 
@@ -275,8 +274,8 @@ function checkForWrites ( node ) {
 ```json5
 {
   node: Node,
-  name: 'default',
-  localName: id | 'default',
+  name: 'default', // default类型的导出，名字固定为default
+  localName: id | 'default', // localName对应该标识符在本模块内的名字
   isDeclaration: boolean
 }
 ```
@@ -323,11 +322,11 @@ export { foo } from './foo';
 
 在对模块代码的 ast 分析的第一步，就是提取出该模块所有的`import/export`信息，分别保存在实例的`imports`和`exports`容器中。其中，`imports`中以`localName`为 key，而`exports`中则以`exportedName`为 key。
 
-到这来，我们已经把模块的`import/export`信息解析完毕了，接着就是调用工具函数`analysis`来处理该模块的作用域，以及解析顶层语句的依赖标识符和可能修改的标识符信息，如上面的`analysis.js`所分析的那样。
+到这里，我们已经把模块的`import/export`信息解析完毕了，接着就是调用工具函数`analysis`来处理该模块的作用域，以及解析顶层语句的依赖标识符和可能修改的标识符信息，如上面的`analysis.js`所分析的那样。
 
-再然后，将顶层作用域中定义的`name`拷贝一份，存放在模块实例的`definedNames`属性中。
+再然后，将该模块的顶层作用域中定义的`name`列表拷贝一份，存放在模块实例的`definedNames`属性中。
 
-然后，再次对 ast 的顶层语句进行遍历，这次遍历的目的是为了整合我们前面通过`analysis`分析出的`_defines`和`_modifies`，将这些信息统一到实例的`definitions`和`modifications`容器中，用来表示整个模块的信息。也即整个模块定义的所有的标识符都保存在`definitions`中，整个模块对`modifications`中的标识符可能会有修改操作。
+然后，再次对 ast 的顶层语句进行遍历，这次遍历的目的是为了整合我们前面通过`analysis`分析出的`_defines`和`_modifies`数据，将这些信息统一到实例的`definitions`和`modifications`容器中，用来表示整个模块的信息。也即整个模块定义的所有的标识符都保存在`definitions`中，整个模块对`modifications`中的标识符可能会有修改操作。
 
 至此，我们的`Module`实例就构建完成啦。
 
@@ -337,10 +336,30 @@ export { foo } from './foo';
 该方法是填充模块的`suggestedNames`容器，容器里面每一个`name`都会有一个合法的标识符
 
 #### expandAllStatements
+从名字上看就是展开该模块的所有的语句，内部会调用`expandStatement`对顶层语句继续进行展开操作，中间会跳过一些`import/export`语句的处理。具体是如何展开语句的，要看`expandStatement`的实现。
 
+#### expandStatement
+对模块的顶层语句进行展开，具体步骤如下：
+
+1. 先获取该顶层语句的依赖(`_dependsOn`属性)，遍历该依赖列表中的`name`，每一个`name`都会通过`this.define(name)`获取其定义，将其定义添加到数组中，如果该定义来自于别的模块，则将其从对应模块中抽取出来
+2. 将该语句本身添加到数组中
+3. 然后遍历该语句的定义列表(`_defines`属性)，检查该`name`是否被模块内的其他语句所修改，如果有的话，对所有的修改语句进行遍历，然后展开这些语句(递归调用`expandStatement`)。
+4. 最后，返回这个数组。
+
+`expandAllStatements`方法会对一个模块的顶层语句进行调整，按照先依赖，在本身，最后修改该语句的定义来重组顺序，该过程处理完毕之后，入口模块所依赖的其他模块的内容都会被抽取出来放在`this.statements`数组中，然后在调用`this.deconflict();`处理名字冲突就完成了`Bundle`的`build`处理。
+
+#### define
 
 ### sequence 工具
-todo
+`sequence`函数接收2个参数：`array`和`callback`，数组里面的每一项都会调用`callback`进行处理，通过`Promise`链的方式进行串行化处理，最后输出结果数组。比如下面的示例：
+```js
+const data = [1,2,3,4,5]
+sequence(data, (item, index) => {
+    return item + index;
+}).then(result => {
+    // 这里的 result 为 [1, 3, 5, 7, 9]，并且各个项的处理是按照他们的顺序依次处理的
+})
+```
 
 ### finalisers
 todo
