@@ -143,12 +143,98 @@ npm install -g typescript ts-node
 ![配置调试环境2](assets/config-debug-2.png)
    
 
-### loadConfigFile.js 分析
+### loadConfigFile.ts 分析
 入口文件为`cli/run/loadConfigFile.ts`
 
+首先，看一下官方文档对该 api 的描述，[Programmatically loading a config file](https://rollupjs.org/guide/en/#programmatically-loading-a-config-file) ，
+我的测试代码如下：
+```js
+const path = require('path');
+const loadAndParseConfigFile = require('../../cli/run/loadConfigFile');
 
-## ESM 构建
+const fileName = path.resolve(__dirname, 'rollup.config.js');
+loadAndParseConfigFile(fileName, { format: 'es' })
+  .then(async ({ options, warnings }) => {
+    // "warnings" wraps the default `onwarn` handler passed by the CLI.
+    // This prints all warnings up to this point:
+    console.log(`We currently have ${warnings.count} warnings`);
+
+    // This prints all deferred warnings
+    warnings.flush();
+
+    // options is an array of "inputOptions" objects with an additional "output"
+    // property that contains an array of "outputOptions".
+    // The following will generate all outputs for all inputs, and write them to disk the same
+    // way the CLI does it:
+    console.log(options);
+  });
+```
+
+
+### node-entry.ts 分析
 todo
 
+### 插件分析
+
+## ESM 构建
+我们看下`esm`的构建配置：
+```js
+const esmBuild = {
+    ...commonJSBuild,
+    input: { 'rollup.js': 'src/node-entry.ts' },
+    plugins: [
+        ...nodePlugins,
+        emitModulePackageFile(),
+        collectLicenses()
+    ], 
+    output: {
+        ...commonJSBuild.output,
+        dir: 'dist/es',
+        format: 'es',
+        sourcemap: false,
+        minifyInternalExports: false
+    }
+};
+```
+可以看到，与`CommonJS`配置相比，`input`里面只有`rollup.js`入口了，插件里面多了2个，`ouput`里面也做了相关调整。整体上看，基本与`CommonJS`一致，入口文件也一致，只有输出格式和输出位置不一样而已。
+
 ## Browser 构建
+最后，我们来看下`Browser`的构建配置：
+```js
+const browserBuilds = {
+    input: 'src/browser-entry.ts',
+    plugins: [
+        replaceBrowserModules(),
+        alias(moduleAliases),
+        resolve({ browser: true }),
+        json(),
+        commonjs(),
+        typescript(),
+        terser({ module: true, output: { comments: 'some' } }),
+        collectLicenses(),
+        writeLicense()
+    ],
+    treeshake,
+    strictDeprecations: true,
+    output: [
+        {
+            file: 'dist/rollup.browser.js', 
+            format: 'umd',
+            name: 'rollup',
+            banner, 
+            sourcemap: true
+        },
+        {
+            file: 'dist/es/rollup.browser.js',
+            format: 'es',
+            banner
+        }
+    ]
+};
+```
+可以看到，入口文件变成了`src/browser-entry.ts`了，插件列表也完全替换成新的了，分别输出了老版浏览器的`umd`格式和现代浏览器的`es`格式。
+
+我们需要从新的入口`src/browser-entry.ts`开始分析了。
+
+### browser-entry.ts 分析
 todo
