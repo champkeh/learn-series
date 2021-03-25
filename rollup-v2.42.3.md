@@ -51,9 +51,9 @@ export default command => {
     return [commonJSBuild, esmBuild, browserBuilds]
 }
 ```
-阅读下文档就基本知道，这样的配置可以同时构建3个不相关的包(Bundle)，分别对应`CommonJS`、`ESM`和`Browser`这3种不同规范的结果。 我们重点关注配置的`input`、`output`字段。
+阅读下文档就基本知道，这样的配置可以同时构建3个不相关的包(Bundle)，分别对应`CommonJS`、`ESM`和`Browser`这3种不同规范的结果。 我们重点关注配置里面的`input`、`output`字段。
 
-下面，我们一个个来分析
+下面，我们来一个个的分析：
 
 ## CommonJS 构建
 我们看下这个构建的配置：
@@ -109,8 +109,9 @@ const commonJSBuild = {
 首先要弄懂几个概念：
 
 - `chunk`
-构建结果如果要写入文件系统，则每一个文件都被称为是一个`Chunk`，`Chunk`的文件名采用`output.entryFileNames`配置，但如果在`output`中指定了`file`选项的话，则采用`file`选项的配置。
-  `Chunk`会分`Entry Chunk`和`Shared Chunk`，`Entry Chunk`是`input`选项中配置的入口文件所生成的`Chunk`，`Shared Chunk`就是代码拆分(code-splitting)时分离出的可公用的`Chunk`。
+构建结果如果要写入文件系统，则每一个文件都被称为是一个`Chunk`，`Chunk`的文件名采用`output.entryFileNames`配置，但如果在`output`中同时指定了`file`选项的话，则`file`选项的优先级更高。
+
+>  `Chunk`分为`Entry Chunk`和`Shared Chunk`，`Entry Chunk`是`input`选项中配置的入口文件所生成的`Chunk`，`Shared Chunk`是代码拆分(code-splitting)时分离出的可公用的`Chunk`。
   
 - `output.entryFileNames`
   为入口文件所生成的`chunk`，也就是`entry chunk`命名
@@ -128,10 +129,10 @@ const commonJSBuild = {
 
 下面，我们先对这两个`entry chunk`进行分析，就从简单的`loadConfigFile.js`开始吧。
 
-在正式开始分析代码之前，还有一件事需要说明，那就是要会使用工具调试`typescript`程序，因为学习源码最快的方式就是打断点调试，查看执行程序流程。我这里用的编辑器是`webstorm`，方法如下：
+在正式开始分析代码之前，还有一件事需要说明，那就是要会使用工具调试`typescript`程序，因为学习源码最快的方式就是打断点调试，查看程序执行流程。我这里用的编辑器是`webstorm`，方法如下：
 1. 安装依赖
 ```shell
-npm install -g typescript ts-node
+npm install typescript ts-node
 ```
 
 2. 添加`typescript`程序的调试配置
@@ -142,6 +143,23 @@ npm install -g typescript ts-node
 添加`node.js`程序，配置如下：
 ![配置调试环境2](assets/config-debug-2.png)
    
+除此之外，`rollup`的源码对模块的引用大部分都是需要配合`rollup`本身的配置才能构建的，比如下面这样的语句：
+```js
+import help from 'help.md';
+import { version } from 'package.json';
+```
+都是利用了`rollup.config.js`中配置的`moduleAliases`，该配置如下：
+```js
+const moduleAliases = {
+    resolve: ['.js', '.json', '.md'], 
+    entries: [
+        { find: 'help.md', replacement: path.resolve('cli/help.md') },
+        { find: 'package.json', replacement: path.resolve('package.json') },
+        { find: 'acorn', replacement: path.resolve('node_modules/acorn/dist/acorn.mjs') }
+    ]
+};
+```
+所以，基于以上原因，想要直接去调试原始的源码很困难，所以我将原始的`rollup v2.42.3`源码重新整理了一遍(**主要就是修改`import/export`语句**)，放在了`v2.42.3`目录下面。
 
 ### loadConfigFile.ts 分析
 入口文件为`cli/run/loadConfigFile.ts`
@@ -175,6 +193,7 @@ loadAndParseConfigFile(fileName, { format: 'es' })
 todo
 
 ### 插件分析
+[Rollup 插件分析](rollup-plugins-v2.42.3.md)
 
 ## ESM 构建
 我们看下`esm`的构建配置：

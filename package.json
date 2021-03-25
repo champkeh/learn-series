@@ -11,11 +11,12 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@rollup/plugin-alias": "^3.1.2",
     "source-map-support": "^0.2.10"
   },
   "dependencies": {
     "acorn": "^1.1.0",
-    "magic-string": "^0.5.1",
-    "escodegen": "^1.6.1"
+    "escodegen": "^1.6.1",
+    "magic-string": "^0.5.1"
   }
 }
