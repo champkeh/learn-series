@@ -1,9 +1,6 @@
-import name from './foo';
-import { bar } from './bar';
-
 let a = 1;
 
-function foo() {
+export function foo() {
     console.log(a);
     a = 2;
     console.log(name);
@@ -11,4 +8,5 @@ function foo() {
 
 console.log(bar)
 
-export default foo
+// export default foo
+export let b = 2
