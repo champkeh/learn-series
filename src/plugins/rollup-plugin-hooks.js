@@ -2,6 +2,7 @@ export default function first() {
     return {
         name: 'first',
 
+
         // build hooks
 
         options(options) {
@@ -68,14 +69,62 @@ export default function first() {
             console.log()
         },
 
+
         // output hooks
 
-        outputOptions() {
+        outputOptions(outputOptions) {
+            // kind: sync, sequential
             console.log('outputOptions:>')
             console.log()
         },
 
+        renderStart(outputOptions, inputOptions) {
+            // kind: async, parallel
+        },
+
+        banner() {
+            // kind: async, parallel
+        },
+        footer() {
+            // kind: async, parallel
+        },
+        intro() {
+            // kind: async, parallel
+        },
+        outro() {
+            // kind: async, parallel
+        },
+
+        renderDynamicImport({ format, moduleId, targetModuleId, customResolution }) {
+            // kind: sync, first
+        },
+
+        augmentChunkHash(chunkInfo) {
+            // kind: sync, sequential
+        },
+
+        resolveFileUrl({ chunkId, fileName, format, moduleId, referenceId, relativePath }) {
+            // kind: sync, first
+        },
+        resolveImportMeta(property, { chunkId, moduleId, format }) {
+            // kind: sync, first
+        },
+
+        renderChunk(code, chunk, options) {
+            // kind: async, sequential
+        },
+
+        generateBundle(options, bundle, isWrite) {
+            // kind: async, sequential
+        },
+
+        writeBundle(options, bundle) {
+            // kind: async, parallel
+        },
+
+
         // watch specific hooks
+
         watchChange() {
             console.log('watchChange:>')
             console.log()

@@ -1,4 +1,4 @@
-import first from './rollup-plugin-first'
+import first from './rollup-plugin-hooks'
 import paintWorkletPlugin from "./rollup-plugin-register-paint-worklet";
 
 export default {
