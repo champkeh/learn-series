@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ShadowDom</title>
+    <script>
+        class PopUpInfo extends HTMLElement {
+            constructor() {
+                super();
+
+                // Create a shadow root
+                const shadow = this.attachShadow({mode: 'open'});
+
+                // Create spans
+                const wrapper = document.createElement('span');
+                wrapper.setAttribute('class', 'wrapper')
+
+                const icon = document.createElement('span')
+                icon.setAttribute('class', 'icon')
+                icon.setAttribute('tabindex', 0)
+                icon.textContent = 'hello'
+
+                const info = document.createElement('span')
+                info.setAttribute('class', 'info')
+
+                // Take attribute content and put it inside the info span
+                const text = this.getAttribute('data-text')
+                console.log(text)
+                info.textContent = text
+
+                // Create some CSS to apply to the shadow dom
+                const style = document.createElement('style')
+                style.textContent = `
+                .wrapper {
+                    position: relative;
+                }
+                .info {
+                    font-size: 0.8rem;
+                    width: 200px;
+                    display: inline-block;
+                    border: 1px solid black;
+                    padding: 10px;
+                    background: white;
+                    border-radius: 10px;
+                    opacity: 0;
+                    transition: 0.6s all;
+                    position: absolute;
+                    bottom: 20px;
+                    left: 10px;
+                    z-index: 3;
+                }
+                a {
+                    width: 1.2rem;
+                    height: 1rem;
+                    background: green;
+                }
+                .icon:hover + .info, .icon:focus + .info {
+                    opacity: 1;
+                }
+                `
+
+                // attach the created elements to the shadow dom
+                shadow.appendChild(style)
+                shadow.appendChild(wrapper)
+                wrapper.appendChild(icon)
+                wrapper.appendChild(info)
+            }
+        }
+
+        customElements.define('popup-info', PopUpInfo)
+    </script>
+    <style>
+        popup-info {
+            position: fixed;
+            top: 100px;
+        }
+    </style>
+</head>
+<body>
+<popup-info data-text="Your card validation code (CVC) is an extra security feature - it is the last 3 or 4 numbers on the back of your card."/>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebAnimation</title>
+  <style>
+    .box {
+      width: 300px;
+      height: 80px;
+      /*animation: alice infinite 3s linear;*/
+    }
+    @keyframes alice {
+      0% {
+        background: #000000;
+        transform: rotate(0) translate3d(50%, 50%, 0);
+      }
+      30% {
+        background: #431236;
+      }
+      100% {
+        background: #000000;
+        transform: rotate(360deg) translate3d(50%, 50%, 0);
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="box"></div>
+
+<script>
+  const aliceTumbling = [
+    {transform: 'rotate(0) translate3D(-50%, -50%, 0)', background: '#000'},
+    {background: '#431236', offset: 0.3},
+    {transform: 'rotate(360deg) translate3D(-50%, -50%, 0)', background: '#000'},
+  ]
+  const aliceTiming = {
+    duration: 3000,
+    iterations: Infinity,
+  }
+  document.querySelector('.box').animate(aliceTumbling, aliceTiming)
+</script>
+</body>
+</html>

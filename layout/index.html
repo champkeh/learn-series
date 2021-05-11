@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>RequestAnimationFrame Demo</title>
+    <style>
+        body {
+            font-family: Arial sans-serif;
+        }
+        canvas {
+            border: 1px solid black;
+        }
+        div {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <h2>RequestAnimationFrame (rAF)</h2>
+        rAF V rAF & setTimeout V setTimeout <br>
+        <canvas id="canvas1" width="150"></canvas>
+        <canvas id="canvas2" width="150"></canvas>
+        <canvas id="canvas3" width="150"></canvas>
+        <br>
+        Click the frame to set the current test. <br>
+        The left frame is using rAF alone, the middle using setTimeout and rAF,
+        and the right frame uses setTimeout alone. <br>
+        Click <input type="button" id="load" value="add Load" /> to simulate a
+        rendering load of around <input type="button" id="loadPlus" value="14ms" title="click to change CPU load between 14 and 28ms" /><br>
+        Try dragging and selecting this text and see how it effects the different methods. <br>
+        rAF is by far the most stable of the 3. <br>
+    </div>
+
+    <script>
+        var ctx1 = canvas1.getContext("2d");
+        var ctx2 = canvas2.getContext("2d");
+        var ctx3 = canvas3.getContext("2d");
+        var lastTime1 = 0;
+        var lastTime2 = 0;
+        var lastTime3 = 0;
+        var frameFunction = frame1;
+        var frameText = "";
+        var drag = false;
+        var loadAmount = 14;
+        var stats = [{
+            data : [],
+            pos : 0,
+            add(val){
+                this.data[(this.pos++) % 150] = val;
+            }
+        },{
+            data : [],
+            pos : 0,
+            add(val){
+                this.data[(this.pos++) % 150] = val;
+            }
+        },{
+            data : [],
+            pos : 0,
+            add(val){
+                this.data[(this.pos++) % 150] = val;
+            }
+        }
+        ];
+        for(let i = 0; i <  150; i += 1){
+            stats[0].add(0);
+            stats[1].add(0);
+            stats[2].add(0);
+        }
+        setupContext(ctx1);
+        setupContext(ctx2);
+        setupContext(ctx3);
+        drawFrameTime(ctx1,0);
+        drawFrameTime(ctx2,0);
+        drawFrameTime(ctx3,0);
+        canvas1.addEventListener("click",()=>frameFunction = frame1);
+        canvas2.addEventListener("click",()=>frameFunction = frame2);
+        canvas3.addEventListener("click",()=>frameFunction = frame3);
+        load.addEventListener("click",()=>{
+            if(drag){
+                drag = false;
+                load.value = "Add load.";
+            }else{
+                drag = true;
+                load.value = "Remove load.";
+            }
+        });
+        loadPlus.addEventListener("click",()=>{
+            if(loadAmount === 14){
+                loadAmount = 28;
+                loadPlus.value = "28ms";
+            }else{
+                loadAmount = 14;
+                loadPlus.value = "14ms";
+            }
+        });
+
+        function CPULoad(){
+            if(drag){
+                var stopAt = performance.now() + loadAmount;
+                while(performance.now() < stopAt);
+            }
+        }
+        function setupContext(ctx){
+            ctx.font = "64px arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+        }
+        function drawStats(ctx,stat){
+            ctx.setTransform(1,0,0,1,0,64);
+            ctx.strokeStyle = "red";
+            ctx.strokeRect(-1,16.666,152,0);
+            ctx.strokeStyle = "black";
+            ctx.beginPath();
+            var i = stat.pos + 149;
+            var x = 0;
+            ctx.moveTo(x,stat.data[(i++) % 150]);
+            while(x ++ < 150 && stat.data[i % 150] !== undefined) {
+                ctx.lineTo(x,stat.data[(i++) % 150]);
+            }
+            ctx.stroke();
+
+        }
+
+        function drawFrameTime(ctx,time){
+            ctx.fillStyle = "black";
+            ctx.setTransform(1,0,0,1,0,0);
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            if(time > 0){
+                ctx.fillStyle = drag ? "red" : "black";
+                ctx.setTransform(1,0,0,1,ctx.canvas.width / 2,ctx.canvas.height *0.25);
+                ctx.fillText(time,0,0);
+                ctx.setTransform(0.4,0,0,0.4,ctx.canvas.width / 2,ctx.canvas.height * 0.75);
+
+                ctx.fillText(Math.round(1000 /  Number(time)) + "fps",0,0);
+            }else{
+                ctx.setTransform(0.4,0,0,0.4,ctx.canvas.width / 2,ctx.canvas.height * 0.75);
+                ctx.fillText("Click to Start.",0,0);
+
+            }
+            ctx.fillStyle = "black";
+            ctx.setTransform(0.2,0,0,0.2,ctx.canvas.width / 2,ctx.canvas.height * 0.9);
+            ctx.fillText(frameText,0,0);
+            if(drag){
+                ctx.fillStyle = "red";
+                ctx.setTransform(0.2,0,0,0.2,ctx.canvas.width / 2,ctx.canvas.height * 0.5);
+                ctx.fillText("Load " + loadAmount + "ms",0,0);
+
+            }
+
+        }
+
+
+
+        function frame1(time){
+            requestAnimationFrame(frameFunction);
+            frameText = "Using rAF.";
+            var frameTime = time - lastTime1;
+            lastTime1 = time;
+            stats[0].add(frameTime);
+            drawFrameTime(ctx1,frameTime.toFixed(2));
+            drawStats(ctx1,stats[0]);
+            CPULoad()
+        }
+
+        function frame2() {
+            setTimeout(function () {
+                frameText = "Using rAF & setTimeout.";
+                var time = performance.now();
+                var frameTime = time - lastTime2;
+                stats[1].add(frameTime);
+                lastTime2 = time;
+                drawFrameTime(ctx2, frameTime.toFixed(2));
+                drawStats(ctx2,stats[1]);
+                CPULoad();
+                requestAnimationFrame(frameFunction);
+            }, 1000 / 60);
+        }
+        function frame3() {
+            setTimeout(frameFunction,1000/60);
+            frameText = "SetTimeout by itself.";
+            var time = performance.now();
+            var frameTime = time - lastTime3;
+            stats[2].add(frameTime);
+            lastTime3 = time;
+            drawFrameTime(ctx3, frameTime.toFixed(2));
+            drawStats(ctx3,stats[2]);
+            CPULoad();
+
+        }
+        requestAnimationFrame(frameFunction);
+    </script>
+</body>
+</html>

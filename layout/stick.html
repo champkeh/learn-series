@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Stick</title>
+    <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/rrweb@latest/dist/rrweb.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/rrweb@latest/dist/rrweb.min.js"></script>
+    <script>
+        const events = []
+        window.addEventListener('load', () => {
+            let stop = rrweb.record({
+                emit(event) {
+                    events.push(event)
+                    if (events.length > 100) {
+                        stop()
+                    }
+                }
+            })
+        })
+
+        function replay() {
+            const replayer = new rrweb.Replayer(events);
+            replayer.play();
+        }
+    </script>
+    <style>
+        body {
+            padding: 0;
+            margin: 0;
+        }
+        .container {
+            height: 500px;
+            background: #797979;
+            margin: 50px 0;
+        }
+        .sticky {
+            position: sticky;
+            top: 0;
+            width: 100px;
+            height: 80px;
+            background: #0661B1;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="sticky"></div>
+</div>
+<div class="container">
+    <div class="sticky"></div>
+</div>
+<div class="container">
+    <div class="sticky"></div>
+</div>
+<div class="container">
+    <div class="sticky"></div>
+</div>
+<div class="container">
+    <div class="sticky"></div>
+</div>
+
+
+<script>
+    document.addEventListener('sticky-change', e => {
+        console.log(e)
+        const header = e.detail.target
+        const sticking = e.detail.stuck
+        header.classList.toggle('shadow', sticking)
+    })
+</script>
+</body>
+</html>

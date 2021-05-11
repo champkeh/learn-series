@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+  <meta charset='UTF-8'>
+  <title>Title</title>
+  <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/rrweb-player@latest/dist/style.css"
+  />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+    .rr-player {
+      position: static;
+      float: none;
+      margin: 0 auto;
+    }
+    .header {
+      width: 1024px;
+      margin: 20px auto;
+      padding-left: 100px;
+    }
+    .users {
+      width: 400px;
+      height: 40px;
+      font-size: 16px;
+      padding: 5px 10px;
+    }
+    .play-btn {
+      font-size: 16px;
+      padding: 0 20px;
+      height: 40px;
+      box-sizing: border-box;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/rrweb-player@latest/dist/index.js"></script>
+</head>
+<body>
+<div class="header">
+  <label for="users">用户:</label>
+  <select id="users" class="users"></select>
+  <button class="play-btn">播放</button>
+</div>
+
+<div class="player"></div>
+<script>
+  function fetchUsers() {
+    return fetch('http://192.168.2.63:5000/users').then(response => response.json()).then(data => {
+      return data.data
+    })
+  }
+  function fetchVideoForUser(uid) {
+    return fetch('http://192.168.2.63:5000/fetch?uid='+uid).then(response => response.json()).then(data => {
+      return data.data
+    })
+  }
+  function play(events) {
+    const player = new rrwebPlayer({
+      target: document.querySelector('.player'), // 可以自定义 DOM 元素
+      // 配置项
+      props: {
+        events,
+      },
+    });
+    player.play()
+    const $btn = document.querySelector('.play-btn')
+    $btn.disabled = true
+    $btn.textContent = '播放中'
+  }
+  document.querySelector('.play-btn').addEventListener('click', async () => {
+    const uid = document.querySelector('select').value
+    const events = await fetchVideoForUser(uid)
+    play(events)
+  })
+  fetchUsers().then(users => {
+    const $select = document.querySelector('.users')
+    users.forEach(uid => {
+      const $option = document.createElement('option')
+      $option.text = uid
+      $option.value = uid
+      $select.appendChild($option)
+    })
+  })
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebGPU</title>
+</head>
+<body>
+<script type="module">
+    import glslangModule from 'https://unpkg.com/@webgpu/glslang@0.0.8/dist/web-devel/glslang.js'
+    import setup from './gpu.js'
+
+    const glslang = await glslangModule()
+    setup(glslang)
+</script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CSS-in-JS &#174;</title>
+    <style>
+        .box {
+            display: flex;
+            justify-content: center;
+        }
+        .box div {
+            width: 100px;
+            height: 50px;
+        }
+        p {
+            margin: 0;
+            display: inline-block;
+            line-height: 1;
+        }
+    </style>
+</head>
+<body>
+<div class="box">
+    <div></div>
+    <div></div>
+    <div></div>
+</div>
+<p style="font-size: 40px">你好</p><p style="font-size: 20px;vertical-align: text-bottom">时间</p>
+<p>PROD &#174 FED-Shop</p>
+<script>
+    // const box = document.querySelector('.box')
+    // box.attributeStyleMap.set('padding', CSS.px(42))
+    performance.mark('hello')
+</script>
+</body>
+</html>

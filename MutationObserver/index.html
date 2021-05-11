@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MutationObserver</title>
+    <style>
+        .grid {
+            display: flex;
+        }
+        .grid-item {
+            flex-grow: 1;
+            background-color: rgba(0, 0, 0, 0.2);
+            margin: 3px;
+            padding: 2px;
+            border-radius: 5px;
+            height: 150px;
+            border: 1px solid rgba(50, 20, 255, 0.8);
+        }
+        .focused-grid-item {
+            border: 1px solid magenta;
+        }
+    </style>
+</head>
+<body>
+<div id="root">
+    <button id="add">Add box</button>
+</div>
+<script>
+    const grids = []
+    const root = document.getElementById('root')
+    const addBtn = document.getElementById('add')
+
+    function createGrid() {
+        const grid = document.createElement('div')
+        root.appendChild(grid)
+        grid.classList.add('grid')
+        grids.push(grid)
+        return grid
+    }
+
+    function createGridBox(tagName, attrs) {
+        const elem = document.createElement(tagName)
+        elem.classList.add('grid-item')
+        if (attrs !== null && typeof attrs === 'object') {
+            Object.entries(attrs).forEach(([attr, value]) => {
+                if (attr === 'style') {
+                    Object.entries(value).forEach(([styleKey, styleValue]) => {
+                        elem.style[styleKey] = styleValue
+                    })
+                } else {
+                    elem[attr] = value
+                }
+            })
+        }
+        return elem
+    }
+
+    function getMostRecentGrid() {
+        if (grids.length === 1) return grids[0]
+        if (grids.length > 1) return grids[grids.length - 1]
+        return null
+    }
+
+    const isActive = elem => elem.classList.contains('focused-grid-item')
+    const highlight = elem => !isActive(elem) && elem.classList.add('focused-grid-item')
+    const unhighlight = elem => isActive(elem) && elem.classList.remove('focused-grid-item')
+
+    addBtn.addEventListener('click', e => {
+        let box = createGridBox('div')
+        let grid = getMostRecentGrid() || createGrid()
+
+        if (grid.children.length >= 3) {
+            grid = createGrid()
+        }
+
+        grid.appendChild(box)
+    })
+
+    const observer = new MutationObserver(mutations => {
+        console.log(mutations)
+        const lastMutation = mutations[mutations.length - 1]
+
+        const { addedNodes, previousSibling, target } = lastMutation
+
+        if (previousSibling) {
+            unhighlight(addedNodes.item(0).previousElementSibling)
+            highlight(addedNodes.item(0))
+        } else {
+            if (target.previousElementSibling && target.previousElementSibling.lastElementChild) {
+                unhighlight(target.previousElementSibling.lastElementChild)
+            }
+            highlight(addedNodes.item(0))
+        }
+    })
+    observer.observe(root, {
+        childList: true,
+        subtree: true,
+    })
+</script>
+</body>
+</html>
